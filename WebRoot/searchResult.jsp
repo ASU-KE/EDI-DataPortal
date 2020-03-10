@@ -2,6 +2,8 @@
 <%@ page import="edu.lternet.pasta.portal.DataPortalServlet" %>
 <%@ page import="edu.lternet.pasta.portal.search.LTERTerms" %>
 
+<%@ include file="context-reader.jsp" %>
+
 <%
   final String pageTitle = "Search Results";
   final String titleText = DataPortalServlet.getTitleText(pageTitle);
@@ -12,11 +14,11 @@
   String termsListHTML = (String) session.getAttribute("termsListHTML");
   if (termsListHTML == null)
     termsListHTML = "";
-  
+
   String queryText = (String) session.getAttribute("queryText");
   String queryURL = "";
-  int textBoxSize = 100;
-  String textBoxSizeStr = "100";
+  int textBoxSize = 80;
+  String textBoxSizeStr = "80";
   if (!queryText.isEmpty()) {
     queryURL = String.format("%ssimpleSearch?%s", basePath, queryText);
     textBoxSize = Math.min(textBoxSize, queryURL.length());
@@ -41,115 +43,104 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-<title><%= titleText %></title>
-
-<meta charset="UTF-8" />
-<meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport">
-
-<link rel="shortcut icon" href="./images/favicon.ico" type="image/x-icon" />
-
-<!-- Google Fonts CSS -->
-<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,300italic" rel="stylesheet" type="text/css">
-
-<!-- Page Layout CSS MUST LOAD BEFORE bootstap.css -->
-<link href="css/style_slate.css" media="all" rel="stylesheet" type="text/css">
-
-<!-- JS 
-<script src="js/jqueryba3a.js?ver=1.7.2" type="text/javascript"></script>
-<script src="bootstrap/js/bootstrap68b368b3.js?ver=1" type="text/javascript"></script>
-<script src="js/jquery.easing.1.368b368b3.js?ver=1" type="text/javascript"></script>
-<script src="js/jquery.flexslider-min68b368b3.js?ver=1" type="text/javascript"></script>
-<script src="js/themeple68b368b3.js?ver=1" type="text/javascript"></script>
-<script src="js/jquery.pixel68b368b3.js?ver=1" type="text/javascript"></script>
-<script src="js/jquery.mobilemenu68b368b3.js?ver=1" type="text/javascript"></script>
-<script src="js/isotope68b368b3.js?ver=1" type="text/javascript"></script>
-<script src="js/mediaelement-and-player.min68b368b3.js?ver=1" type="text/javascript"></script>-->
-<script src="js/jquery-1.11.0.min.js" type="text/javascript"></script>
-<script src="js/data-shelf-ajax.js" type="text/javascript"></script>
-<script src="js/clipboard.min.js"></script>
-
-<!-- Mobile Device CSS -->
-<link href="bootstrap/css/bootstrap.css" media="screen" rel="stylesheet" type="text/css">
-<link href="bootstrap/css/bootstrap-responsive.css" media="screen" rel="stylesheet" type="text/css">
-
-</head>
-
-<body>
-
-
-<jsp:include page="header.jsp" />
-
+  <head>
+    <!-- common <head> tag elements -->
+    <jsp:include page="common-head.jsp">
+        <jsp:param name="siteName" value="<%= siteName %>" />
+    </jsp:include>
+    <script src="js/clipboard.min.js"></script>
+  </head>
+  <body>
+    <!-- incude main ASU Header-->
+    <jsp:include page="asu-header.jsp">
+        <jsp:param name="siteAsuTitle" value="<%= siteAsuTitle %>" />
+        <jsp:param name="siteAsuSubtitle" value="<%= siteAsuSubtitle %>" />
+        <jsp:param name="siteAsuTitleLink" value="<%= siteAsuTitleLink %>" />
+        <jsp:param name="siteAsuSubtitleLink" value="<%= siteAsuSubtitleLink %>" />
+    </jsp:include>
+    <jsp:include page="<%= menuInclude %>" flush="true" />
     <script>
-    var clipboard = new Clipboard('.btn');
+      var clipboard = new Clipboard('.btn');
 
-    clipboard.on('success', function(e) {
-        console.log(e);
-    });
+      clipboard.on('success', function(e) {
+          console.log(e);
+      });
 
-    clipboard.on('error', function(e) {
-        console.log(e);
-    });
+      clipboard.on('error', function(e) {
+          console.log(e);
+      });
     </script>
- 
-  <div class="row-fluid ">
-		<div class="container">
-			<div class="row-fluid distance_1">
-				<div class="box_shadow box_layout">
-					<div class="row-fluid">
-						<div class="span12">
-							<div class="recent_title">
-								<h2>Search Results</h2>
-							</div>
-							<span class="row-fluid separator_border"></span>
-						</div>
-						
-						<div class="row-fluid">
-							<div class="span12">
-								<!-- Content -->
-	<table>
-   		<tr>
-			<td>			
-				<%=mapButtonHTML%>
-			</td>
-			<td>
-				<%=relevanceHTML%>
-			</td>
-  		</tr>
-	</table>
-    <table>
-        <tr>
-            <td>
-              <table>
-                <tr>
-                  <td><button class="btn btn-info btn-default" data-clipboard-action="copy" data-clipboard-target="#queryURL">Copy Query URL</button></td>
-                </tr>
-                <tr>
-                  <td>&nbsp;</td>
-                </tr>
-              </table>
-            </td>
-            <td>&nbsp;</td>
-            <td>
-              <input id="queryURL" type="url" value="<%=queryURL%>" size="<%=textBoxSizeStr%>">
-            </td>
-        </tr>
-    </table>
+    <div class="container main-content">
+      <div class="row align-items-center">
+        <div class="col">
+            <h1>Search Results</h1>
+        </div>
+        <div class="col-2">
+            <button class="btn btn-secondary" href="#search-details" data-toggle="collapse"><span class="fas fa-link"></span> Search URL</button>
+        </div>
+        <div class="col-2">
+            <form id="mapsearch" class="form-inline" action="./mapSearchServlet" method="post" name="mapsearch">
+              <button type="submit" class="btn btn-secondary"><span class="fas fa-map-marker-alt"></span> View as Map</button>
+            </form>
+        </div>
+        <div class="col">
+          <form class="form-inline" action="./simpleSearch" method="post" _lpchecked="1">
+            <div class="input-group">
+              <input class="form-control" type="search" name="terms" id="navBarTerms" placeholder="Search The Portal" aria-label="Search">
+              <div class="input-group-append">
+                <button class="btn btn-primary" type="submit">Search</button>
+              </div>
+            </div>
+          </form>
+          <!-- <span><a href="advancedSearch.jsp">Advanced Search</a></span> -->
+       </div>
+      </div>
+      <div class="row">
+        <div class="col-8">
+          <%=termsListHTML%>
+        </div>
+        <div class="col">
+          <a href="advancedSearch.jsp">Advanced Search</a>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+            <div class="collapse" id="search-details">
+                <div class="card mb-5 bg-light">
+                  <h5 class="card-header">Search URL</h5>
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col">
+                        <p>You can use the URL shown below to run this search again:</p>
+                        <div class="input-group">
+                          <input id="queryURL" type="text" value="<%=queryURL%>" class="form-control" placeholder="query-URL" aria-label="query-URL" aria-describedby="basic-addon1">
+                          <div class="input-group-append">
+                            <a href="#" data-clipboard-target="#queryURL" class="btn btn-secondary">Copy URL</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
+        </div>
+      </div>
 
-
-                <%=termsListHTML%>
-				<%=searchResult%>
-			    
-						  </div>
-		 		    </div>
-				  </div>
-			  </div>
-		  </div>
-	  </div>
-		<jsp:include page="footer.jsp" />
-  </div>
-
-</body>
-
+      <div class="row">
+        <div class="col">
+          <%=searchResult%>
+        </div>
+      </div>
+    </div>
+    <div class="footer mt-5">
+        <jsp:include page="<%= bigFooterInclude %>" />
+        <jsp:include page="asu-footer.jsp" />
+    </div>
+    <%@ include file="bootstrap-javascript.jsp" %>
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+    </script>
+  </body>
 </html>
