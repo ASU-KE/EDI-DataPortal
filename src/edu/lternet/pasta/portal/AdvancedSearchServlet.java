@@ -53,30 +53,30 @@ public class AdvancedSearchServlet extends DataPortalServlet {
 
   private static String cwd = null;
   private static String xslpath = null;
-  
-  
+
+
   /*
    * Instance variables
    */
-  
-  
+
+
   /*
    * Constructors
    */
-  
+
   /**
    * Constructor of the object.
    */
   public AdvancedSearchServlet() {
     super();
   }
-  
+
 
   /*
    * Class methods
    */
 
-  
+
   /*
    * Instance methods
    */
@@ -89,12 +89,12 @@ public class AdvancedSearchServlet extends DataPortalServlet {
     // Put your code here
   }
 
-  
+
   /**
    * The doGet method of the servlet. <br>
-   * 
+   *
    * This method is called when a form has its tag value method equals to get.
-   * 
+   *
    * @param request
    *          the request send by the client to the server
    * @param response
@@ -111,12 +111,12 @@ public class AdvancedSearchServlet extends DataPortalServlet {
 
   }
 
-  
+
   /**
    * The doPost method of the servlet. <br>
-   * 
+   *
    * This method is called when a form has its tag value method equals to post.
-   * 
+   *
    * @param request
    *          the request send by the client to the server
    * @param response
@@ -128,7 +128,7 @@ public class AdvancedSearchServlet extends DataPortalServlet {
    */
   public void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    
+
     String forward = "./searchResult.jsp";
     String html = "";
     TermsList termsList = null;
@@ -136,11 +136,11 @@ public class AdvancedSearchServlet extends DataPortalServlet {
     String xml = null;
 
     HttpSession httpSession = request.getSession();
-    
+
     String uid = (String) httpSession.getAttribute("uid");
-    
+
     if (uid == null || uid.isEmpty()) uid = "public";
-    
+
     String boundaryContained = request.getParameter("boundaryContained");
     String boundsChangedCount = request.getParameter("boundsChangedCount");
     String dateField = request.getParameter("dateField");
@@ -149,11 +149,16 @@ public class AdvancedSearchServlet extends DataPortalServlet {
     String datesContained = request.getParameter("datesContained");
     String yearsMin = request.getParameter("yearsMin");
     String yearsMax = request.getParameter("yearsMax");
-    String creatorOrganization = request.getParameter("creatorOrganization");
+    // commented this out because we are using our own filter query for organizations
+    // String creatorOrganization = request.getParameter("creatorOrganization");
+    String creatorOrganization = Search.GIOS_FILTER;
     String creatorName = request.getParameter("creatorName");
     String locationName = request.getParameter("locationName");
     String namedTimescale = request.getParameter("namedTimescale");
-    String[] siteValues = request.getParameterValues("siteValues");
+    // we don't need siteValues, so we're setting it to NULL, as it would be if the form element
+    // were left empty.
+    // String[] siteValues = request.getParameterValues("siteValues");
+    String[] siteValues = null;
     String subjectField = request.getParameter("subjectField");
     String subjectValue = request.getParameter("subjectValue");
     String specific = request.getParameter("specific");
@@ -165,12 +170,12 @@ public class AdvancedSearchServlet extends DataPortalServlet {
     String identifier = request.getParameter("identifier");
     String projectTitle = request.getParameter("projectTitle");
     String funding = request.getParameter("funding");
-    
+
     String northBound = request.getParameter("northBound");
     String southBound = request.getParameter("southBound");
     String eastBound = request.getParameter("eastBound");
     String westBound = request.getParameter("westBound");
-    
+
     boolean isBoundaryContainedChecked = (boundaryContained != null);
     boolean isDatesContainedChecked = (datesContained != null);
     boolean isIncludeEcotrendsChecked = (ecotrends != null);
@@ -178,7 +183,7 @@ public class AdvancedSearchServlet extends DataPortalServlet {
     boolean isSpecificChecked = (specific != null);
     boolean isRelatedChecked = (related != null);
     boolean isRelatedSpecificChecked = (relatedSpecific != null);
-       
+
     SolrAdvancedSearch solrAdvancedSearch = new SolrAdvancedSearch(
       creatorName,
       creatorOrganization,
@@ -233,7 +238,7 @@ public class AdvancedSearchServlet extends DataPortalServlet {
 				SavedData savedData = new SavedData(uid);
 				resultSetUtility = new ResultSetUtility(xml, Search.DEFAULT_SORT, savedData, isSavedDataPage);
 			}
-			
+
 			String mapButtonHTML = resultSetUtility.getMapButtonHTML();
 			request.setAttribute("mapButtonHTML", mapButtonHTML);
 			//String relevanceHTML = resultSetUtility.getRelevanceHTML();
@@ -248,10 +253,10 @@ public class AdvancedSearchServlet extends DataPortalServlet {
 		}
   }
 
-  
+
   /**
    * Initialization of the servlet. <br>
-   * 
+   *
    * @throws ServletException
    *           if an error occurs
    */
@@ -263,5 +268,5 @@ public class AdvancedSearchServlet extends DataPortalServlet {
     cwd = options.getString("system.cwd");
     logger.debug("CWD: " + cwd);
   }
-  
+
 }

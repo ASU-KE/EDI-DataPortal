@@ -42,27 +42,27 @@ import edu.lternet.pasta.portal.search.LTERSite;
 
 
 /**
- * AdvancedSearch class constructs queries that use the pathquery feature of 
+ * AdvancedSearch class constructs queries that use the pathquery feature of
  * Metacat. It can execute either an advanced search, where the user fills in
  * fields in a web form, or a simple search on a string.
  */
 public class SolrAdvancedSearch extends Search  {
-  
+
   /*
    * Class fields
    */
 
 	private static final Logger logger = Logger.getLogger(SolrAdvancedSearch.class);
 
-  
+
   /*
    * Instance fields
    */
-  
+
   /*
    * Form parameters
    */
-	
+
   private final String creatorOrganization;
   private final String creatorName;
   private final String dateField;
@@ -82,7 +82,7 @@ public class SolrAdvancedSearch extends Search  {
   private String identifier;
   private String projectTitle;
   private String funding;
-  
+
   private boolean isBoundaryContainedChecked;
   private String boundsChangedCount;
   private String northBound;
@@ -90,7 +90,7 @@ public class SolrAdvancedSearch extends Search  {
   private String eastBound;
   private String westBound;
   private String locationName;
- 
+
   private String queryString;
   private String qString;
   private String fqString;
@@ -102,7 +102,7 @@ public class SolrAdvancedSearch extends Search  {
   private boolean hasNarrowRelated = false;
   private boolean hasAll = false;
 
-  
+
   /*
    * Constructors
    */
@@ -159,7 +159,7 @@ public class SolrAdvancedSearch extends Search  {
     this.identifier = identifier;
     this.projectTitle = projectTitle;
     this.funding = funding;
-    
+
     this.isBoundaryContainedChecked = isBoundaryContainedChecked;
     this.boundsChangedCount = boundsChangedCount;
     this.northBound = northBound;
@@ -167,43 +167,56 @@ public class SolrAdvancedSearch extends Search  {
     this.eastBound = eastBound;
     this.westBound = westBound;
     this.locationName = locationName;
-    
+
     this.hasExact = !isSpecificChecked && !isRelatedChecked && !isRelatedSpecificChecked;
     this.hasNarrow = isSpecificChecked && !isRelatedChecked && !isRelatedSpecificChecked;
     this.hasRelated = !isSpecificChecked && isRelatedChecked && !isRelatedSpecificChecked;
     this.hasNarrowRelated = isSpecificChecked && isRelatedChecked && !isRelatedSpecificChecked;
     this.hasAll = isRelatedSpecificChecked;
-    
+
     this.qString = DEFAULT_Q_STRING;
     this.fqString = initializeFilterQuery(includeEcotrends, includeLandsat5);
   }
-  
-  
+
+
   /*
    * Instance methods
    */
-  
+
   /*
    * Composes the filter query string for advanced search as determined by whether
    * the user has chosen to include optional content for Ecotrends or Landsat5.
    */
   private String initializeFilterQuery(boolean includeEcotrends, boolean includeLandsat5) {
+      String giosEncodedFilter = "";
 	  StringBuilder sb = new StringBuilder("");
 	  if (!includeEcotrends) { sb.append(String.format("fq=%s", ECOTRENDS_FILTER)); }
-	  if (!includeLandsat5) { 
+	  if (!includeLandsat5) {
 		  String prefix = includeEcotrends ? "" : "&";
-		  sb.append(String.format("%sfq=%s", prefix, LANDSAT_FILTER)); 
+		  sb.append(String.format("%sfq=%s", prefix, LANDSAT_FILTER));
 	  }
-	  String filterQuery = sb.toString();
-	  return filterQuery;
+
+    // always add a query filter to limit results to our desired organization(s)
+    try {
+        // our filter contains reserved characters, so URL encode them
+        giosEncodedFilter = URLEncoder.encode(CAP_FILTER, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+
+    }
+
+    String giosFilter = String.format("&fq=%s", giosEncodedFilter);
+    sb.append(giosFilter);
+
+    String filterQuery = sb.toString();
+    return filterQuery;
   }
 
-  
+
   /*
    * Class methods
    */
 
-  
+
   /*
    * Instance methods
    */
@@ -212,7 +225,7 @@ public class SolrAdvancedSearch extends Search  {
    * A full subject query searches the title, abstract, and keyword sections of
    * the document. Individual searches on these sections is also supported.
    */
-	private void buildQuerySubject(TermsList termsList) 
+	private void buildQuerySubject(TermsList termsList)
 		 throws UnsupportedEncodingException {
 		List<String> terms;
 		String field = "subject";
@@ -231,11 +244,11 @@ public class SolrAdvancedSearch extends Search  {
 			terms = parseTerms(this.subjectValue);
 
 			TreeSet<String> derivedTerms = new TreeSet<String>();
-			
+
 			for (String term : terms) {
 				derivedTerms.add(term);
-				
-				TreeSet<String> webTerms = 
+
+				TreeSet<String> webTerms =
 						ControlledVocabularyClient.webServiceSearchValues(
 								term, hasExact, hasNarrow, hasRelated, hasNarrowRelated, hasAll);
 
@@ -263,8 +276,8 @@ public class SolrAdvancedSearch extends Search  {
 			updateQString(subjectQuery);
 		}
 	}
-	
-	
+
+
 	private void updateQString(String qText) {
 		if (this.qString.equals(DEFAULT_Q_STRING)) {
 			this.qString = qText;
@@ -283,7 +296,7 @@ public class SolrAdvancedSearch extends Search  {
   /**
    * An author query will search on the creator name and/or creator organization.
    */
-  private void buildQueryAuthor(TermsList termsList) 
+  private void buildQueryAuthor(TermsList termsList)
           throws UnsupportedEncodingException {
 
     if (this.creatorName != null && !this.creatorName.equals("")) {
@@ -303,14 +316,14 @@ public class SolrAdvancedSearch extends Search  {
         String encodedValue = URLEncoder.encode(organizationQuery, "UTF-8");
         updateQString(encodedValue);
     }
-    
+
   }
-  
+
 
   /**
    * Builds query group for a search on a specific named location.
    */
-  private void buildQueryGeographicDescription(String locationName, TermsList termsList) 
+  private void buildQueryGeographicDescription(String locationName, TermsList termsList)
   		throws UnsupportedEncodingException {
 		if ((locationName != null) && (!(locationName.equals("")))) {
 			String parenthesizedValue = parenthesizeQueryValue(locationName);
@@ -322,15 +335,15 @@ public class SolrAdvancedSearch extends Search  {
 			updateQString(locationQuery);
 		}
   }
-  
-  
+
+
   /**
    * Builds query group for spatial search on north/south/east/west bounding
    * coordinates. Includes logic to handle queries across the international
    * date line.
    */
 	private void buildQueryFilterSpatial(String northValue, String southValue,
-			String eastValue, String westValue, boolean boundaryContained) 
+			String eastValue, String westValue, boolean boundaryContained)
 		throws UnsupportedEncodingException {
 		boolean crosses;
 		final String shapeOperation = boundaryContained ? "IsWithin" : "Intersects";
@@ -365,15 +378,15 @@ public class SolrAdvancedSearch extends Search  {
 			if (crosses) {
 				// Not sure yet how to manage international date-line queries in Solr
 			}
-			
-			String spatialFilter = String.format("coordinates:\"%s(%s %s %s %s)\"", 
+
+			String spatialFilter = String.format("coordinates:\"%s(%s %s %s %s)\"",
 					                             shapeOperation, westValue, southValue, eastValue, northValue);
 			String encodedSpatialFilter = URLEncoder.encode(spatialFilter, "UTF-8");
 			updateFQString(encodedSpatialFilter);
 		}
 	}
-	
-	
+
+
 	/*
 	 * Boolean to determine whether the user changed the boundary values. Google Maps
 	 * makes this very hard to determine since they seem to keep changing the default
@@ -383,23 +396,23 @@ public class SolrAdvancedSearch extends Search  {
 	 * and south to -84.67. Very problematic, so the best we can hope for is a kludge
 	 * that will work most of the time.
 	 */
-	private boolean boundsWereChanged(String boundsChangedCount, 
+	private boolean boundsWereChanged(String boundsChangedCount,
 			                          String northValue,
 			                          String southValue,
 			                          String eastValue,
 			                          String westValue) {
 		boolean changed = false;
-		
+
 		int count = Integer.valueOf(boundsChangedCount);
 		float north = Float.valueOf(northValue);
 		float south = Float.valueOf(southValue);
 		float east = Float.valueOf(eastValue);
 		float west = Float.valueOf(westValue);
-		
+
 		if ((count >= 3) ||
-			(north < 84.0) || 
-			(south > -84.0) || 
-			(east < 180.0) || 
+			(north < 84.0) ||
+			(south > -84.0) ||
+			(east < 180.0) ||
 			(west > -180.0)
 		   ) {
 			changed = true;
@@ -407,14 +420,14 @@ public class SolrAdvancedSearch extends Search  {
 
 		return changed;
 	}
-  
+
 
   /*
    * Helper method to implement server-side validation of geographic coordinate values.
    */
-  private String validateGeographicCoordinate(String stringValue, 
-                                              float minValue, 
-                                              float maxValue, 
+  private String validateGeographicCoordinate(String stringValue,
+                                              float minValue,
+                                              float maxValue,
                                               String defaultValue) {
     String returnValue = defaultValue;
     String warning = "Illegal geographic coordinate specified: '" + stringValue +
@@ -428,7 +441,7 @@ public class SolrAdvancedSearch extends Search  {
         Float floatValue = new Float(stringValue);
 
         if ((floatValue != null) &&
-            (floatValue >= minValue) && 
+            (floatValue >= minValue) &&
             (floatValue <= maxValue)) {
           returnValue = stringValue;
         }
@@ -440,10 +453,10 @@ public class SolrAdvancedSearch extends Search  {
         logger.warn(warning);
       }
     }
-    
+
     return returnValue;
   }
-  
+
 
   /**
    * Two kinds of temporal searches are supported. The first is on a named
@@ -455,10 +468,10 @@ public class SolrAdvancedSearch extends Search  {
                                           boolean isDatesContainedChecked,
                                           String yearsMin,
                                           String yearsMax,
-                                          String namedTimescale, 
+                                          String namedTimescale,
                                           String namedTimescaleQueryType,
                                           TermsList termsList
-                                         ) 
+                                         )
   		throws UnsupportedEncodingException {
   	  String LEFT_BRACKET = "%5B";
   	  String RIGHT_BRACKET = "%5D";
@@ -466,7 +479,7 @@ public class SolrAdvancedSearch extends Search  {
 	  boolean startDateSpecified = false;
 	  boolean yearsMinSpecified = false;
 	  boolean yearsMaxSpecified = false;
-	  
+
     /* If the user specified a named time-scale query, search for it
      * in the "timescale" field.
      */
@@ -478,7 +491,7 @@ public class SolrAdvancedSearch extends Search  {
       String timescaleQuery = String.format("timescale:%s", encodedValue);
       updateQString(timescaleQuery);
     }
-    
+
     if ((startDate == null) || (startDate.equals(""))) {
     	startDate = "*";
     }
@@ -496,7 +509,7 @@ public class SolrAdvancedSearch extends Search  {
     }
 
     validateDateRange(startDate, endDate);
-    
+
     // If a start date or an end date was specified, search temporal coverage
     //
     if (startDateSpecified || endDateSpecified) {
@@ -510,11 +523,11 @@ public class SolrAdvancedSearch extends Search  {
     	  String endDateQuery = String.format("enddate:%s%s+TO+NOW%s", LEFT_BRACKET, startDate, RIGHT_BRACKET);
     	  collectionFilter = String.format("(%s+OR+(%s+AND+%s))", singleDateQuery, startDateQuery, endDateQuery);
       }
-      
+
       if (dateField.equals("ALL") || dateField.equals("PUBLICATION")) {
     	  pubDateFilter = String.format("pubdate:%s%s+TO+%s%s", LEFT_BRACKET, startDate, endDate, RIGHT_BRACKET);
       }
-      
+
       if (dateField.equals("ALL")) {
     	  temporalFilter = String.format("(%s+OR+%s)", pubDateFilter, collectionFilter);
       }
@@ -524,17 +537,17 @@ public class SolrAdvancedSearch extends Search  {
       else if (dateField.equals("PUBLICATION")) {
     	  temporalFilter = pubDateFilter;
       }
-      
-      updateFQString(temporalFilter);   
+
+      updateFQString(temporalFilter);
     }
-    
+
     if ((yearsMin == null) || (yearsMin.equals(""))) {
     	yearsMin = "*";
     }
     else {
     	yearsMinSpecified = true;
     }
-    
+
     if ((yearsMax == null) || (yearsMax.equals(""))) {
     	yearsMax = "*";
     }
@@ -545,12 +558,12 @@ public class SolrAdvancedSearch extends Search  {
     if (yearsMinSpecified || yearsMaxSpecified) {
     	String durationFilter = null;
         durationFilter = String.format("duration:%s%s+TO+%s%s", LEFT_BRACKET, yearsMin, yearsMax, RIGHT_BRACKET);
-        updateFQString(durationFilter);       	
+        updateFQString(durationFilter);
     }
 
   }
-  
-  
+
+
   /*
    * Check whether a user's input date string conforms with one of the
    * allowed formats as specified on the web form.
@@ -561,7 +574,7 @@ public class SolrAdvancedSearch extends Search  {
     DateFormat dateFormat2 = new SimpleDateFormat("yyyy-MM");
     DateFormat dateFormat3 = new SimpleDateFormat("yyyy");
     Date date = null;
-    
+
     if (dateString == null || dateString.equals("")) {
       return dateString;
     }
@@ -582,15 +595,15 @@ public class SolrAdvancedSearch extends Search  {
           }
           catch (ParseException e3) {
             logger.warn("Couldn't parse date string using any of the recognized formats: " + dateString);
-          }    
+          }
         }
       }
     }
-    
+
     return returnValue;
   }
-  
-  
+
+
   /*
    * Check whether a user's input date range is valid.
    */
@@ -598,23 +611,23 @@ public class SolrAdvancedSearch extends Search  {
     Date startDate = null;
     Date endDate = null;
     DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-    
+
     try {
       if ((startDateStr != null) && (endDateStr != null)) {
         startDate = dateFormat.parse(startDateStr);
         endDate = dateFormat.parse(endDateStr);
-      
+
         if ((startDate != null) && (endDate != null) && (startDate.after(endDate))) {
           throw new IllegalArgumentException(
-            "The date range is invalid. Start date ('" + startDateStr + 
-            "') should be less than end date ('" + endDateStr + "').");   	
+            "The date range is invalid. Start date ('" + startDateStr +
+            "') should be less than end date ('" + endDateStr + "').");
         }
       }
     }
     catch (ParseException e) {
       logger.warn("Couldn't parse date string: " + e.getMessage());
     }
-    
+
   }
 
 
@@ -622,10 +635,10 @@ public class SolrAdvancedSearch extends Search  {
    * A taxon query searches the taxonRankValue field,
    * matching the field if the user-specified value is contained in the field.
    */
-  private void buildQueryTaxon(TermsList termsList) 
+  private void buildQueryTaxon(TermsList termsList)
   		throws UnsupportedEncodingException {
     final String value = this.taxon;
-      
+
     if ((value != null) && (!(value.equals("")))) {
       termsList.addTerm(value);
       String parenthesizedValue = parenthesizeQueryValue(value);
@@ -635,7 +648,7 @@ public class SolrAdvancedSearch extends Search  {
       updateQString(taxonQuery);
     }
   }
-  
+
 
 	/**
 	 * An identifier query searches the doi and packageid fields, matching the
@@ -685,7 +698,7 @@ public class SolrAdvancedSearch extends Search  {
 			List<String> terms = parseTerms(this.projectTitle);
 
 			TreeSet<String> derivedTerms = new TreeSet<String>();
-		
+
 			for (String term : terms) {
 				derivedTerms.add(term);
 			}
@@ -744,11 +757,11 @@ public class SolrAdvancedSearch extends Search  {
 				    String plusSign = (i > 0) ? "+" : "";
 					siteQuery = String.format("%s%s%s", siteQuery, plusSign, attributeValue);
 					if ((i + 1) == siteValues.length) { // tack on the closing parenthesis
-						siteQuery = String.format("%s)", siteQuery); 
+						siteQuery = String.format("%s)", siteQuery);
 					}
 				}
 			}
-			
+
 			updateFQString(siteQuery);
 		}
 	}
@@ -757,16 +770,16 @@ public class SolrAdvancedSearch extends Search  {
   /**
    * Boolean to determine whether the east/west coordinates of a spatial search
    * cross over the international date line.
-   * 
+   *
    * @param eastValue
    * @param westValue
    * @return true if the values cross the data line, else false.
    */
-  private boolean crossesInternationalDateline(String eastValue, 
+  private boolean crossesInternationalDateline(String eastValue,
                                                String westValue
                                                ) {
     boolean crosses = false;
-    
+
     if ((eastValue != null) &&
         (eastValue != "") &&
         (westValue != null) &&
@@ -774,38 +787,38 @@ public class SolrAdvancedSearch extends Search  {
        ) {
       Double eastInteger = new Double(eastValue);
       Double westInteger = new Double(westValue);
-      
+
       crosses = westInteger > eastInteger;
     }
-    
+
     logger.debug("crosses International Dateline: " + crosses);
-    
+
     return crosses;
   }
 
-  
+
 	/**
 	 * Builds and runs a search, returning the result XML string.
-	 * 
+	 *
 	 * @param uid
 	 *            the user id
 	 */
-	public String executeSearch(final String uid) 
+	public String executeSearch(final String uid)
 			throws Exception {
 		buildQuerySubject(this.termsList);
-		buildQueryAuthor(this.termsList); 
+		buildQueryAuthor(this.termsList);
 		buildQueryTaxon(this.termsList);
 		buildQueryIdentifier(this.termsList);
         buildQueryProject(this.termsList);
 		buildQueryGeographicDescription(this.locationName, this.termsList);
 		buildQueryFilterTemporal(this.dateField, this.startDate,
-		   this.endDate, this.isDatesContainedChecked, 
-		   this.yearsMin, this.yearsMax, 
+		   this.endDate, this.isDatesContainedChecked,
+		   this.yearsMin, this.yearsMax,
 		   this.namedTimescale, this.namedTimescaleQueryType, this.termsList);
 		buildQueryFilterSite(this.termsList);
 		buildQueryFilterSpatial(this.northBound, this.southBound, this.eastBound,
 				 this.westBound, this.isBoundaryContainedChecked);
-	
+
 		queryString = String.format(
 				"defType=%s&q=%s&%s&fl=%s&debug=%s",
 				DEFAULT_DEFTYPE, this.qString.trim(), this.fqString.trim(),
@@ -823,7 +836,7 @@ public class SolrAdvancedSearch extends Search  {
 
 	/**
 	 * Accessor method for the queryString instance variable.
-	 * 
+	 *
 	 * @return queryString
 	 */
 	public String getQueryString() {
@@ -833,7 +846,7 @@ public class SolrAdvancedSearch extends Search  {
 
 	/**
 	 * Accessor method for the termsList instance variable.
-	 * 
+	 *
 	 * @return termsList, a TermsList object
 	 */
 	public TermsList getTermsList() {

@@ -33,7 +33,7 @@ import org.apache.log4j.Logger;
 /**
  * The SimpleSearch class supports query operations common to the simple
  * search and browse search interfaces.
- * 
+ *
  * @author dcosta
  *
  */
@@ -45,22 +45,22 @@ public class SimpleSearch extends Search {
 
     private static final Logger logger = Logger.getLogger(SimpleSearch.class);
 
-	  
+
   /**
    * Builds a query for submission to the DataPackageManager
    * and then to Solr.
-   * 
+   *
    * @param userInput    The terms entered by the user (e.g. "climate change")
    * @param termsList    List of terms used in the search, which may include terms other
    * @param isSiteQuery  true if we are querying by site name, else false.
-   * 
+   *
    *                     When true, the user input is being sent from the browse crawler
    *                     and its value will be a site acronym like "KNZ".
-   *                     
+   *
    *                     When false, the user input is being sent from the search form
    *                     and will be anything that the end user has typed in the search box,
    *                     or, it may be a controlled vocabulary term sent from the browse
-   *                     crawler. 
+   *                     crawler.
    * @return the Solr query string, including any filter queries, to be sent to Solr
    *         for processing
    */
@@ -68,15 +68,16 @@ public class SimpleSearch extends Search {
 		String solrQuery = null;
 		String qString = DEFAULT_Q_STRING;
 		String siteFilter = "";
+		String giosEncodedFilter = "";
 		List<String> terms;
 
 		if (userInput != null && !userInput.equals("")) {
 			terms = parseTerms(userInput);
-			
+
 			for (String term : terms) {
 				termsList.addTerm(term);
 			}
-			
+
 			try {
 				if (isSiteQuery) {
 					siteFilter = String.format("&fq=scope:(knb-lter-%s)", userInput.toLowerCase());
@@ -89,14 +90,20 @@ public class SimpleSearch extends Search {
 			catch (UnsupportedEncodingException e) {
 
 			}
-			
-			solrQuery = String.format(
-					"defType=%s&q=%s%s&fq=%s&fq=%s&fl=%s&debug=%s",
-					DEFAULT_DEFTYPE, qString, siteFilter, ECOTRENDS_FILTER,
-					LANDSAT_FILTER, DEFAULT_FIELDS, DEFAULT_DEBUG);
+
+			// supply a filter query to limit our search to just the organization(s) we want
+			try {
+				//giosEncodedFilter = URLEncoder.encode(GIOS_FILTER, "UTF-8");
+				giosEncodedFilter = URLEncoder.encode(CAP_FILTER, "UTF-8");
+			} catch (UnsupportedEncodingException e) {
+
+			}
+
+			solrQuery = String.format("defType=%s&q=%s%s&fq=%s&fq=%s&fq=%s&fl=%s&debug=%s", DEFAULT_DEFTYPE, qString,
+					siteFilter, giosEncodedFilter, ECOTRENDS_FILTER, LANDSAT_FILTER, DEFAULT_FIELDS, DEFAULT_DEBUG);
 		}
 
 		return solrQuery;
 	}
-  
+
 }
