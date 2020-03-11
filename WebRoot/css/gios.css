@@ -139,13 +139,13 @@ Sub-Menu
 /*******************
 Buttons
 *******************/
-.btn-primary {
+.btn-primary, .btn-info {
     background-color: #8c1d40;
     border-color: #8c1d40;
     color: #fff;
 }
 
-.btn-primary:hover, .btn-primary:active {
+.btn-primary:hover, .btn-primary:active, .btn-info:hover, .btn-info:active {
     background-color: #62142d !important;
     border-color: #591229 !important;
 }
