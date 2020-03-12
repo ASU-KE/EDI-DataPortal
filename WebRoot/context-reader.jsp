@@ -8,6 +8,7 @@
     final String siteAsuTitleLink = sc.getInitParameter("siteAsuTitleLink");
     final String siteAsuSubtitle = sc.getInitParameter("siteAsuSubtitle");
     final String siteAsuSubtitleLink = sc.getInitParameter("siteAsuSubtitleLink");
+    final String homePageUrl = sc.getInitParameter("homePageUrl");
 
     /* construct strings for includes. We are expecting inlcudes in a folder with the same
     name as our sitePrefix, and the filename to also start withe file filePrefix. If we are

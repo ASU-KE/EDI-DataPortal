@@ -34,7 +34,12 @@
         <jsp:param name="siteAsuTitleLink" value="<%= siteAsuTitleLink %>" />
         <jsp:param name="siteAsuSubtitleLink" value="<%= siteAsuSubtitleLink %>" />
     </jsp:include>
-<jsp:include page="<%= menuInclude %>" flush="true" />
+
+    <!-- main navigation menu -->
+    <jsp:include page="<%= menuInclude %>" flush="true">
+        <jsp:param name="homePageUrl" value="<%= homePageUrl %>" />
+    </jsp:include>
+
 		<div class="container main-content">
 			<div class="row">
 				<div class="col">

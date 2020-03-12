@@ -76,8 +76,13 @@
         <jsp:param name="siteAsuTitleLink" value="<%= siteAsuTitleLink %>" />
         <jsp:param name="siteAsuSubtitleLink" value="<%= siteAsuSubtitleLink %>" />
     </jsp:include>
-  <jsp:include page="<%= menuInclude %>" flush="true" />
-	<div class="container main-content">
+
+    <!-- main navigation menu -->
+    <jsp:include page="<%= menuInclude %>" flush="true">
+        <jsp:param name="homePageUrl" value="<%= homePageUrl %>" />
+    </jsp:include>
+
+  <div class="container main-content">
     <h3>Advanced Search</h3>
     <hr class="mb-3" />
     <form id="advancedSearchForm" action="./advancedSearch" method="post" name="advancedSearchForm" onsubmit="return submitRequest(this)">

@@ -110,7 +110,7 @@
                             <a class="nav-link" href="https://sustainability.asu.edu/caplter/publications/">Publications</a>
                         </li>
 						<li class="nav-item active">
-							<a class="nav-link" href="https://data.sustainability.asu.edu/caplter-portal/home.jsp">Data</a>
+							<a class="nav-link" href="${param.homePageUrl}">Data</a>
 						</li>
 						<li class="nav-item">
 							<a class="nav-link" href="https://sustainability.asu.edu/caplter/news/">News</a>
