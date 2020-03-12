@@ -43,14 +43,17 @@
   <xsl:variable name="resourcetitle" select="*/dataset/title"/>
   <!-- global variables to store id node set in case to be referenced -->
   <xsl:variable name="ids" select="//*[@id != '']"/>
-  <xsl:variable name="prov-stmt" select="'This method step describes provenance-based metadata as specified in the LTER EML Best Practices.'"/>
+  <!-- not safe to use this string
+  <xsl:variable name="prov-stmt" select="'This method step describes provenance-based metadata as specified in the LTER EML Best Practices.'"/> -->
+  <!-- uniq string that identifies a pasta id; used to detect homies. TO DO: determine if you can use wildcards here, eg, pasta*metadata -->
+  <xsl:variable name="pasta-id-string" select="'pasta.*metadata'"/>
 
   <!-- *** Parameters ***
        Note that the default values specified below may be overridden by passing parameters to
        the XSLT processor programatically, although the procedure for doing so is vendor-specific.
   -->
   <!-- change debugmessages value to 1 to enable debugging output -->
-  <xsl:param name="debugmessages">1</xsl:param>
+  <xsl:param name="debugmessages">0</xsl:param>
   <xsl:param name="entitytype"></xsl:param>
   <xsl:param name="entityindex">1</xsl:param>
   <xsl:param name="resourceId"></xsl:param>
@@ -121,16 +124,18 @@
   <xsl:param name="secondColIndent" select="'10%'"/>
   <!-- the first column width of attribute table-->
   <xsl:param name="attributefirstColWidth" select="'15%'"/>
+  <xsl:param name="subgroupBorder" select="subgroupBorder" />
 
   <xsl:template match="/">
     <xsl:param name="docid" select="$docid"></xsl:param>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: /</xsl:text></xsl:message></xsl:if>
     <!-- HTML5 DOCTYPE declaration -->
     <xsl:text disable-output-escaping='yes'>&lt;!DOCTYPE html>&#x0A;</xsl:text>
+
         <!-- begin the content area -->
-
+        <xsl:element name="div">
           <xsl:apply-templates select="*[local-name()='eml']"/>
-
+        </xsl:element> <!-- closes the div element around the page. -->
         <!-- mob 2010-03-24 mob added to catch error msgs. -->
         <div>
           <xsl:apply-templates select="error"/>
@@ -138,6 +143,7 @@
         <!-- end the content area -->
         <xsl:text>&#x0A;</xsl:text>
         <xsl:text>&#x0A;</xsl:text>
+
   </xsl:template>
 
   <xsl:template match="error">
@@ -165,9 +171,12 @@
     <xsl:for-each select="protocol">
       <xsl:call-template name="emlprotocol"/>
     </xsl:for-each>
-    <xsl:for-each select="additionalMetadata">
-      <xsl:call-template name="additionalmetadata"/>
-    </xsl:for-each>
+    <fieldset>
+      <legend>Other Metadata</legend>
+      <xsl:for-each select="additionalMetadata">
+        <xsl:call-template name="additionalmetadata"/>
+      </xsl:for-each>
+    </fieldset>
     <xsl:if test="$withOriginalXMLLink='1'">
       <xsl:call-template name="xml"/>
     </xsl:if>
@@ -184,220 +193,171 @@
       <xsl:with-param name="packageID" select="$packageID"/>
     </xsl:call-template>
 
-    <h3 class="mt-4">Summary Information</h3>
+    <fieldset>
+      <legend>Summary Information</legend>
       <xsl:call-template name="datasetpart">
         <xsl:with-param name="packageID" select="$packageID"></xsl:with-param>
       </xsl:call-template>
+    </fieldset>
 
-    <div class="row">
-      <div class="col">
-        <h3 class="mt-4">Detailed Metadata</h3>
-      </div>
-      <div class="col text-right">
-        <div class="btn-group" role="group" aria-label="toggle buttons">
-          <button class="btn btn-success btn-sm mt-4" id="showAll"><span class="fas fa-chevron-circle-down"></span> Show All</button>
-          <button class="btn btn-warning btn-sm mt-4" id="hideAll"><span class="fas fa-chevron-circle-up"></span> Hide All</button>
-        </div>
-      </div>
-    </div>
+    <button id="showAll">Show Details</button><button id="hideAll">Hide Details</button>
+    <fieldset>
+      <legend>Detailed Metadata</legend>
 
-    <div class="card my-2">
-      <div class="card-header">
-        <h2 class="mb-0">
-          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#dataEntities" aria-expanded="true" aria-controls="dataEntities">
-            <span class="fas fa-chevron-circle-down"></span> Data Entities
-          </button>
-        </h2>
-      </div>
-      <div class="card-body collapse" id="dataEntities">
+      <h3 id="toggleEntities" class="toggleButton"><button>+/-</button> Data Entities</h3>
+      <div class="collapsible">
         <xsl:call-template name="entitypart"/>
-      </div>
-    </div>
+      </div> <!-- end collapsible -->
 
-    <xsl:if test="intellectualRights">
-      <div class="card my-2">
-        <div class="card-header">
-          <h2 class="mb-0">
-            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#useRights" aria-expanded="true" aria-controls="dataEntities">
-              <span class="fas fa-chevron-circle-down"></span> Data Package Use Rights
-            </button>
-          </h2>
-        </div>
-        <div class="card-body collapse" id="useRights">
-          <table class="table table-bordered">
-            <tr>
-              <td>
-                  <xsl:for-each select="intellectualRights">
-                    <xsl:call-template name="resourceintellectualRights">
-                      <xsl:with-param name="resfirstColStyle" select="$firstColStyle"/>
-                      <xsl:with-param name="ressecondColStyle" select="$secondColStyle"/>
-                    </xsl:call-template>
-                  </xsl:for-each>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </div>
-    </xsl:if>
+      <xsl:if test="intellectualRights">
+      <h3 id="toggleDataSetUsageRights" class="toggleButton"><button>+/-</button> Data Package Usage Rights</h3>
+      <div class="collapsible">
+        <!-- add in the intellectual rights info -->
+        <table class="subGroup onehundred_percent">
+          <tr>
+            <td>
+                <xsl:for-each select="intellectualRights">
+                  <xsl:call-template name="resourceintellectualRights">
+                    <xsl:with-param name="resfirstColStyle" select="$firstColStyle"/>
+                    <xsl:with-param name="ressecondColStyle" select="$secondColStyle"/>
+                  </xsl:call-template>
+                </xsl:for-each>
+            </td>
+          </tr>
+        </table>
+      </div> <!-- end collapsible -->
+      </xsl:if>
 
-    <xsl:if test="keywordSet">
-      <div class="card my-2">
-        <div class="card-header">
-          <h2 class="mb-0">
-            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#keywords" aria-expanded="true" aria-controls="keywords">
-              <span class="fas fa-chevron-circle-down"></span> Keywords
-            </button>
-          </h2>
-        </div>
-        <div class="card-body collapse" id="keywords">
+<xsl:if test="annotation">
+  <h3 id="toggleDatasetAnnotations" class="toggleButton"><button>+/-</button> External Annotations</h3>
+  <div class="collapsible">
+    <!-- the annotations table, with rows as an rdf-style sentence. -->
+    <table class="{$tabledefaultStyle}">
+      <tr>
+        <th colspan="2">With link(s) out to external vocabularies</th>
+      </tr>
+      <xsl:for-each select="annotation">
+        <tr>
+          <td class="{$secondColStyle}">
+                <xsl:text>Dataset </xsl:text>
+            <xsl:call-template name="annotationMinimum" />
+          </td>
+        </tr>
+      </xsl:for-each>
+    </table>
+  </div>
+</xsl:if>
+
+
+
+      <xsl:if test="keywordSet">
+      <h3 id="toggleKeywords" class="toggleButton"><button>+/-</button> Keywords</h3>
+      <div class="collapsible">
+        <!-- the keywords table. -->
           <table class="{$tabledefaultStyle}">
-              <tr>
-                <th colspan="2">By Thesaurus:</th>
-              </tr>
-                  <xsl:for-each select="keywordSet">
-                      <tr>
-                        <xsl:choose>
-                          <xsl:when test="keywordThesaurus">
-                            <td class="{$firstColStyle}"><xsl:value-of select="keywordThesaurus" /></td>
-                          </xsl:when>
-                          <xsl:otherwise>
-                            <td class="{$firstColStyle}">(No thesaurus)</td>
-                          </xsl:otherwise>
-                        </xsl:choose>
-                        <td class="{$secondColStyle}">
-                          <xsl:call-template name="resourcekeywordsAsPara" ></xsl:call-template>
-                        </td>
-                      </tr>
-                  </xsl:for-each>
-            </table>
-        </div>
-      </div>
-    </xsl:if>
+            <tr>
+              <th colspan="2">By Thesaurus:</th>
+            </tr>
+                <xsl:for-each select="keywordSet">
+                     <tr>
+                      <xsl:choose>
+                        <xsl:when test="keywordThesaurus">
+                          <td class="{$firstColStyle}"><xsl:value-of select="keywordThesaurus" /></td>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          <td class="{$firstColStyle}">(No thesaurus)</td>
+                        </xsl:otherwise>
+                      </xsl:choose>
+                      <td class="{$secondColStyle}">
+                        <xsl:call-template name="resourcekeywordsAsPara" ></xsl:call-template>
+                      </td>
+                    </tr>
+                </xsl:for-each>
+          </table>
+      </div> <!-- end collapsible -->
+      </xsl:if>
 
-    <div class="card my-2">
-      <div class="card-header">
-        <h2 class="mb-0">
-          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#protocols" aria-expanded="true" aria-controls="protocols">
-            <span class="fas fa-chevron-circle-down"></span> Methods and Protocols
-          </button>
-        </h2>
-      </div>
-      <div class="card-body collapse" id="protocols">
+      <h3 id="toggleMethods" class="toggleButton"><button>+/-</button> Methods and Protocols</h3>
+      <div class="collapsible">
+        <!-- mob added 2010-03-26  -->
         <xsl:call-template name="ifmethods">
           <xsl:with-param name="docid" select="$docid"/>
           <xsl:with-param name="packageID" select="$packageID"/>
         </xsl:call-template>
-      </div>
-    </div>
+      </div> <!-- end collapsible -->
 
-    <div class="card my-2">
-      <div class="card-header">
-        <h2 class="mb-0">
-          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#people" aria-expanded="true" aria-controls="people">
-            <span class="fas fa-chevron-circle-down"></span> People and Organizations
-          </button>
-        </h2>
-      </div>
-      <div class="card-body collapse" id="people">
+      <h3 id="togglePeople" class="toggleButton"><button>+/-</button> People and Organizations</h3>
+      <div class="collapsible">
+        <!-- Organization/Personnel Information -->
+        <!-- mob added 2010-03-26 -->
         <xsl:call-template name="responsiblepartiespart">
           <xsl:with-param name="docid" select="$docid"/>
           <xsl:with-param name="resourcetitle" select="$resourcetitle"/>
           <xsl:with-param name="packageID" select="$packageID"/>
         </xsl:call-template>
-      </div>
-    </div>
+      </div> <!-- end collapsible -->
+      <!-- mob added 2010-03-26. this one only used by attribute-level coverage  -->
+      <!-- <xsl:if test="$displaymodule='coverage' "> -->
+      <xsl:if test="boolean(0)">
+        <xsl:call-template name="coveragepart">
+          <xsl:with-param name="docid" select="$docid"/>
+          <xsl:with-param name="resourcetitle" select="$resourcetitle"/>
+        </xsl:call-template>
+      </xsl:if>
 
-    <!-- mob added 2010-03-26. this one only used by attribute-level coverage  -->
-    <!-- <xsl:if test="$displaymodule='coverage' "> -->
-    <xsl:if test="boolean(0)">
-      <xsl:call-template name="coveragepart">
-        <xsl:with-param name="docid" select="$docid"/>
-        <xsl:with-param name="resourcetitle" select="$resourcetitle"/>
-      </xsl:call-template>
-    </xsl:if>
-
-    <div class="card my-2">
-      <div class="card-header">
-        <h2 class="mb-0">
-          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#temporal" aria-expanded="true" aria-controls="temporal">
-            <span class="fas fa-chevron-circle-down"></span> Temporal, Geographic, and Taxonomic Coverage
-          </button>
-        </h2>
-      </div>
-      <div class="card-body collapse" id="temporal">
+      <h3 id="toggleCoverage" class="toggleButton"><button>+/-</button> Temporal, Geographic and Taxonomic Coverage</h3>
+      <div class="collapsible">
+        <!-- mob added 2010-03-26  -->
         <xsl:call-template name="ifcoverage">
           <xsl:with-param name="packageID" select="$packageID"/>
         </xsl:call-template>
-      </div>
-    </div>
+      </div> <!-- end collapsible -->
 
-    <xsl:if test="project">
-    <div class="card my-2">
-      <div class="card-header">
-        <h2 class="mb-0">
-          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#project" aria-expanded="true" aria-controls="project">
-            <span class="fas fa-chevron-circle-down"></span> Project
-          </button>
-        </h2>
-      </div>
-      <div class="card-body collapse" id="project">
-        <xsl:call-template name="datasetproject"></xsl:call-template>
-      </div>
-    </div>
-    </xsl:if>
+      <h3 id="toggleMethods" class="toggleButton"><button>+/-</button> Project</h3>
+      <div class="collapsible">
+         <xsl:call-template name="datasetproject">
+         </xsl:call-template>
+      </div> <!-- end collapsible -->
 
-    <xsl:if test="maintenance">
-      <div class="card my-2">
-        <div class="card-header">
-          <h2 class="mb-0">
-            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#maintenance" aria-expanded="true" aria-controls="maintenance">
-              <span class="fas fa-chevron-circle-down"></span> Maintenance
-            </button>
-          </h2>
-        </div>
-        <div class="card-body collapse" id="maintenance">
-          <table class="table table-bordered">
-            <tr>
-              <td>
-                  <xsl:for-each select="maintenance">
-                    <xsl:call-template name="datasetmaintenance">
-                      <xsl:with-param name="resfirstColStyle" select="$firstColStyle"/>
-                      <xsl:with-param name="ressecondColStyle" select="$secondColStyle"/>
-                    </xsl:call-template>
-                  </xsl:for-each>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </div>
-    </xsl:if>
+      <xsl:if test="maintenance">
+      <h3 id="toggleMaintenance" class="toggleButton"><button>+/-</button> Maintenance</h3>
+      <div class="collapsible">
+        <!-- add in the maintenance info -->
+        <table class="subGroup onehundred_percent">
+          <tr>
+            <td>
+                <xsl:for-each select="maintenance">
+                  <xsl:call-template name="datasetmaintenance">
+                    <xsl:with-param name="resfirstColStyle" select="$firstColStyle"/>
+                    <xsl:with-param name="ressecondColStyle" select="$secondColStyle"/>
+                  </xsl:call-template>
+                </xsl:for-each>
+            </td>
+          </tr>
+        </table>
+      </div> <!-- end collapsible -->
+      </xsl:if>
 
-    <xsl:if test="additionalInfo">
-      <div class="card my-2">
-        <div class="card-header">
-          <h2 class="mb-0">
-            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#additional" aria-expanded="true" aria-controls="additional">
-              <span class="fas fa-chevron-circle-down"></span> Additional Info
-            </button>
-          </h2>
-        </div>
-        <div class="card-body collapse" id="additional">
-          <table class="table table-bordered">
-            <tr>
-              <td>
-                  <xsl:for-each select="additionalInfo">
-                    <xsl:call-template name="resourceadditionalInfo">
-                      <xsl:with-param name="ressubHeaderStyle" select="$secondColStyle"/>
-                      <xsl:with-param name="resfirstColStyle" select="$secondColStyle"/>
-                    </xsl:call-template>
-                  </xsl:for-each>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </div>
-    </xsl:if>
+      <xsl:if test="additionalInfo">
+      <h3 id="toggleAdditionalInfo" class="toggleButton"><button>+/-</button> Additional Info</h3>
+      <div class="collapsible">
+        <!-- add in the maintenance info -->
+        <table class="subGroup onehundred_percent">
+          <tr>
+            <td>
+                <xsl:for-each select="additionalInfo">
+                  <xsl:call-template name="resourceadditionalInfo">
+                    <xsl:with-param name="ressubHeaderStyle" select="$secondColStyle"/>
+                    <xsl:with-param name="resfirstColStyle" select="$secondColStyle"/>
+                  </xsl:call-template>
+                </xsl:for-each>
+            </td>
+          </tr>
+        </table>
+      </div> <!-- end collapsible -->
+      </xsl:if>
 
+    </fieldset>
     <!-- end Detailed Metadata -->
 
     <!-- <xsl:if test="$displaymodule='attribute'"> -->
@@ -495,7 +455,7 @@
     <table class="onehundred_percent">
       <tr>
         <td>
-          <table class="table table-bordered">
+          <table class="subGroup onehundred_percent">
             <xsl:if test="publisher">
               <th>Publishers:</th>
               <xsl:for-each select="publisher">
@@ -573,7 +533,7 @@
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: coveragepart</xsl:text></xsl:message></xsl:if>
     <h3>Data Package Coverage</h3>
     <!-- add in the coverage info -->
-    <table class="table table-bordered">
+    <table class="subGroup onehundred_percent">
       <tr>
         <!-- add in the geographic coverage info -->
         <td>
@@ -817,7 +777,7 @@
         <td>
         <xsl:if test="./methods">
           <h4><xsl:text>These methods, instrumentation and/or protocols apply to all data in this dataset:</xsl:text></h4>
-          <table class="table table-bordered">
+          <table class="subGroup onehundred_percent">
             <tr>
               <td>
                 <!-- print the type of parent element, and title or description -->
@@ -1904,11 +1864,7 @@
   <!-- download XML part -->
   <xsl:template name="xml">
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: xml</xsl:text></xsl:message></xsl:if>
-    <p>
-      <a target="_blank" class="btn btn-secondary my-3" href="./metadataviewer?packageid={$packageID}&#38;contentType=application/xml"><span class="fas fa-download"></span> Download as XML</a>
-      <br />
-      <span class="text-secondary"><sup>*</sup>Downloads are in <a href="https://knb.ecoinformatics.org/external//emlparser/docs/index.html" target="_blank">Ecological Metadata Language</a></span>
-    </p>
+    <br/><a target="_blank" href="./metadataviewer?packageid={$packageID}&#38;contentType=application/xml">Download as XML</a> (in Ecological Metadata Language)
   </xsl:template>
 
   <!-- This module is for dataset -->
@@ -1939,18 +1895,15 @@
         <xsl:value-of select="."/>
       </xsl:for-each>
     </h2>
-    <hr class="my-3" />
   </xsl:template>
 
   <xsl:template name="datasetmixed">
     <xsl:param name="packageID"></xsl:param>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: datasetmixed</xsl:text></xsl:message></xsl:if>
-    <table class="table table-bordered">
-      <thead class="thead-light">
-        <tr>
-          <th colspan="2">Data Package General Information:</th>
-        </tr>
-      </thead>
+    <table class="subGroup onehundred_percent">
+      <tr>
+        <th colspan="2">Data Package General Information:</th>
+      </tr>
       <!-- put in the identifier and system that the ID belongs to -->
       <xsl:if test="../@packageId">
         <xsl:for-each select="../@packageId">
@@ -2037,7 +1990,7 @@
       <xsl:if test="distribution/@id">
         <tr>
           <td colspan="2">
-            <table class="table table-bordered">
+            <table class="subGroup onehundred_percent">
               <tr>
                 <td>
                   <table class="{$tabledefaultStyle}">
@@ -2046,7 +1999,11 @@
                       <tr>
                         <td class="{$firstColStyle}"><xsl:text>Visit: </xsl:text></td>
                         <td class="{$secondColStyle}">
-                          <a><xsl:attribute name="href"><xsl:value-of select="online/url"/></xsl:attribute><xsl:value-of select="online/url"/></a>
+                          <a>
+                            <xsl:attribute name="class">dataseteml</xsl:attribute>
+                            <xsl:attribute name="href"><xsl:value-of select="online/url"/>
+                            </xsl:attribute><xsl:value-of select="online/url"/>
+                          </a>
                         </td>
                       </tr>
                     </xsl:for-each>
@@ -2067,12 +2024,10 @@
         </xsl:call-template>
       </xsl:for-each>
     </xsl:if>
-    <table class="table table-bordered">
-      <thead class="thead-light">
-        <tr>
-          <th colspan="2">People and Organizations</th>
-        </tr>
-      </thead>
+    <table class="subgroup onehundred_percent">
+      <tr>
+        <th colspan="2"><br/>People and Organizations</th>
+      </tr>
       <!-- Put the contacts first -->
       <xsl:for-each select="contact">
       <tr>
@@ -2132,7 +2087,9 @@
             </xsl:choose>
             <xsl:text>&#160;</xsl:text>
             <xsl:if test="electronicMailAddress">[&#160;
-              <a><xsl:attribute name="href"><xsl:text>mailto:</xsl:text><xsl:value-of select="electronicMailAddress"/></xsl:attribute>email</a>&#160;]
+              <a>
+                <xsl:attribute name="class">dataseteml</xsl:attribute>
+                <xsl:attribute name="href"><xsl:text>mailto:</xsl:text><xsl:value-of select="electronicMailAddress"/></xsl:attribute>email</a>&#160;]
             </xsl:if>
           </td>
         </tr>
@@ -2229,6 +2186,10 @@
                           <xsl:value-of select="../positionName"/>
                         </xsl:when>
                       </xsl:choose>
+                      <xsl:if test="../role">
+                        <xsl:text>,&#160;</xsl:text>
+                        <xsl:value-of select="../role"/>
+                      </xsl:if>
                       <xsl:text>)</xsl:text>
                     </xsl:if>
                   </xsl:for-each>
@@ -2263,11 +2224,9 @@
     <xsl:if test="dataTable|spatialRaster|spatialVector|storedProcedure|view|otherEntity">
       <table class="{$tabledefaultStyle}">
         <xsl:if test="dataTable or spatialRaster or spatialVector or storedProcedures or view or otherEntity">
-          <thead class="thead-light">
-            <tr>
-              <th colspan="2"><xsl:text>Data Entities</xsl:text></th>
-            </tr>
-          </thead>
+          <tr>
+            <th colspan="2"><br/><xsl:text>Data Entities</xsl:text></th>
+          </tr>
         </xsl:if>
         <!--  when you call the entityurl template, include a label for type of entity  -->
         <xsl:for-each select="dataTable">
@@ -2327,7 +2286,7 @@
     </table> -->
     <!-- add in the method info
     <h3>Sampling, Processing and Quality Control Methods</h3>
-    <table class="table table-bordered">
+    <table class="subGroup onehundred_percent">
       <tr>
         <td colspan="2" class="onehundred_percent">
           <xsl:if test="./methods">
@@ -2343,7 +2302,7 @@
     </table> -->
     <xsl:if test="boolean(0)">
       <!-- add in the access control info -->
-      <table class="table table-bordered">
+      <table class="subGroup onehundred_percent">
         <tr>
           <td>
             <xsl:if test="access">
@@ -2730,6 +2689,7 @@
             <tr>
               <td class="{$secondColStyle}">
                 <a>
+                  <xsl:attribute name="class">dataseteml</xsl:attribute>
                   <xsl:attribute name="href">mailto:<xsl:value-of select="."/></xsl:attribute>
                   <xsl:value-of select="./entityName"/>
                   <xsl:value-of select="."/>
@@ -2753,6 +2713,7 @@
             <tr>
               <td class="{$secondColStyle}">
                 <a>
+                  <xsl:attribute name="class">dataseteml</xsl:attribute>
                   <xsl:attribute name="href"><xsl:value-of select="."/></xsl:attribute>
                   <xsl:value-of select="./entityName"/>
                   <xsl:value-of select="."/>
@@ -2787,6 +2748,7 @@
                 <xsl:attribute name="href">
                   <xsl:value-of select="$useridDirectoryApp1_URI"/><xsl:value-of select="."/>
                 </xsl:attribute>
+                <xsl:attribute name="class">dataseteml</xsl:attribute>
                 <xsl:value-of select="$useridDirectoryLabel1"/>
                 <xsl:text> Profile for </xsl:text>
                 <xsl:value-of select="../individualName/surName"/>
@@ -2899,14 +2861,14 @@
           <!-- letting the foreach select the current node instead of geographicCoverage lets this work for
           either dataset/coverage or attribute/coverage, but I do not know why (oh no!).  -->
           <xsl:for-each select=".">
-            <table class="table table-bordered">
+            <table class="subgroup onehundred_percent">
               <xsl:call-template name="geographicCovCommon" />
             </table>
           </xsl:for-each>
         </xsl:for-each>
       </xsl:when>
       <xsl:otherwise>
-        <table class="table table-bordered">
+        <table class="subgroup onehundred_percent">
             <xsl:call-template name="geographicCovCommon" />
           </table>
       </xsl:otherwise>
@@ -3130,13 +3092,13 @@
         <xsl:variable name="ref_id" select="references"/>
         <xsl:variable name="references" select="$ids[@id=$ref_id]" />
         <xsl:for-each select="$references">
-          <table class="table table-bordered">
+          <table class="subgroup onehundred_percent">
             <xsl:call-template name="temporalCovCommon" />
           </table>
         </xsl:for-each>
       </xsl:when>
       <xsl:otherwise>
-        <table class="table table-bordered">
+        <table class="subgroup onehundred_percent">
             <xsl:call-template name="temporalCovCommon" />
           </table>
       </xsl:otherwise>
@@ -3145,11 +3107,9 @@
 
   <xsl:template name="temporalCovCommon">
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: temporalCovCommon</xsl:text></xsl:message></xsl:if>
-    <thead class="thead-light">
-      <tr>
-        <th colspan="2"><xsl:text>Time Period</xsl:text></th>
-      </tr>
-    </thead>
+    <tr>
+      <th colspan="2"><br/><xsl:text>Time Period</xsl:text></th>
+    </tr>
     <xsl:apply-templates select="singleDateTime"/>
     <xsl:apply-templates select="rangeOfDates"/>
   </xsl:template>
@@ -3427,6 +3387,103 @@
     </tr>
   </xsl:template>
 
+  <xsl:template match="taxonId" mode="nest">
+    <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: taxonId</xsl:text></xsl:message></xsl:if>
+    <tr>
+      <td class="{$firstColStyle}"><xsl:text>Identifer:</xsl:text></td>
+
+      <!-- to do: logic to name id provider, create a URL if you can. -->
+      <xsl:variable name="provider-label">
+        <xsl:choose>
+          <xsl:when test="@provider = 'https://eol.org'">
+            <xsl:text>Encyclopedia of Life (EOL)</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'https://itis.gov'">
+            <xsl:text>Integrated Taxonomic Information Service (ITIS)</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'https://www.ncbi.nlm.nih.gov/taxonomy'">
+            <xsl:text>National Center for Biotechnology Information - Taxonomy (NCBI)</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'http://plantsoftheworldonline.org'">
+            <xsl:text>Plants of the World</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'https://tropicos.org'">
+            <xsl:text>Tropicos</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'http://marinespecies.org'">
+            <xsl:text>World Register of Marine Species (WoRMS)</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'https://fishbase.se'">
+            <xsl:text>FishBase</xsl:text>
+          </xsl:when>
+          <xsl:otherwise><xsl:value-of select="@provider"/></xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      <td class="{$secondColStyle}">
+        <xsl:element name="a">
+          <xsl:attribute name="class">dataseteml</xsl:attribute>
+          <xsl:attribute name="target">_blank</xsl:attribute>
+          <xsl:attribute name="href">
+            <xsl:value-of select="@provider"/>
+          </xsl:attribute>
+          <xsl:value-of select="$provider-label"/>
+        </xsl:element>
+     </td>
+      <xsl:variable name="taxon-page-url-head">
+        <xsl:choose>
+          <xsl:when test="@provider = 'https://eol.org'">
+            <xsl:text>https://www.eol.org/pages/</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'https://itis.gov'">
+            <xsl:text>https://itis.gov/servlet/SingleRpt/SingleRpt?search_topic=TSN&amp;search_value=</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'https://www.ncbi.nlm.nih.gov/taxonomy'">
+            <xsl:text>https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'http://plantsoftheworldonline.org'">
+            <xsl:text>http://www.plantsoftheworldonline.org/taxon/</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'https://tropicos.org'">
+            <xsl:text>https://www.tropicos.org/Name/</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'http://marinespecies.org'">
+            <xsl:text>http://marinespecies.org/aphia.php?p=taxdetails&amp;id=</xsl:text>
+          </xsl:when>
+          <xsl:when test="@provider = 'https://fishbase.se'">
+            <xsl:text>https://www.fishbase.se/summary/</xsl:text>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:text>no_url</xsl:text>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      <td class="{$secondColStyle}">
+        <xsl:choose>
+          <!-- build a URL for the taxon if there is a url-head  -->
+          <xsl:when test="$taxon-page-url-head != 'no_url'">
+            <xsl:element name="a">
+              <xsl:attribute name="class">dataseteml</xsl:attribute>
+              <xsl:attribute name="target">_blank</xsl:attribute>
+              <xsl:attribute name="href">
+                <xsl:value-of select="$taxon-page-url-head"/><xsl:value-of select="."/>
+              </xsl:attribute>
+              <!-- create a label for the anchor tag -->
+              <xsl:text>Info for ID: </xsl:text>
+              <xsl:value-of select="."/>
+              <xsl:text> (</xsl:text><xsl:value-of select="../taxonRankValue"/><xsl:text>) </xsl:text>
+            </xsl:element>
+          </xsl:when>
+          <xsl:otherwise>
+            <!-- no_url is true -->
+            <xsl:text>ID: </xsl:text>
+            <xsl:value-of select="."/>
+        </xsl:otherwise>
+        </xsl:choose>
+      </td>
+
+    </tr>
+  </xsl:template>
+
   <xsl:template match="taxonomicClassification" mode="nest">
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: taxonomicClassification</xsl:text></xsl:message></xsl:if>
     <tr>
@@ -3456,8 +3513,8 @@
     </xsl:param>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: dataTable</xsl:text></xsl:message></xsl:if>
     <hr></hr>
-    <h4>Data Table</h4>
-    <table class="table table-bordered">
+    <h2>Data Table</h2>
+    <table class="subGroup onehundred_percent">
       <tr>
         <td>
           <table class="{$tabledefaultStyle}">
@@ -3855,22 +3912,13 @@
 
   <xsl:template name="additionalmetadata">
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: additionalmetadata</xsl:text></xsl:message></xsl:if>
-    <h4 class="mt-3">Other Information</h4>
-      <div class="card my-2">
-        <div class="card-header">
-          <h2 class="mb-0">
-            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#additional-meta" aria-expanded="true" aria-controls="additional-meta">
-              <span class="fas fa-chevron-circle-down"></span> Additional Metadata
-            </button>
-          </h2>
-        </div>
-        <div class="card-body collapse" id="additional-meta">
-          <pre>
-            <xsl:text>additionalMetadata&#xA;</xsl:text>
-            <xsl:apply-templates mode="ascii-art" />
-          </pre>
-        </div>
-      </div>
+    <h3 class="toggleButton"><button>+/-</button> Additional Metadata</h3>
+    <div class="collapsible">
+<pre>
+   <xsl:text>additionalMetadata&#xA;</xsl:text>
+   <xsl:apply-templates mode="ascii-art" />
+</pre>
+    </div>
   </xsl:template>
 
   <xsl:template match="*" mode="ascii-art">
@@ -4119,6 +4167,40 @@
         </xsl:choose>
       </xsl:for-each>
     </tr>
+
+    <!-- Third row, part 2 is for attribute annotation.
+      Added 2019, by mob -->
+    <xsl:if test="attribute/annotation">
+    <tr>
+      <td class="rowodd">External Measurement Definition, Link:</td>
+
+    <xsl:for-each select="attribute">
+      <xsl:variable name="stripes">
+        <xsl:choose>
+          <xsl:when test="position() mod 2 = 1">
+            <xsl:value-of select="$coloddStyle"/>
+          </xsl:when>
+          <xsl:when test="position() mod 2 = 0">
+            <xsl:value-of select="$colevenStyle"/>
+          </xsl:when>
+        </xsl:choose>
+      </xsl:variable>
+
+        <td colspan="1" align="center" class="{$stripes}">
+          <xsl:if test="annotation">
+            <xsl:for-each select="annotation">
+             <xsl:call-template name="annotationMinimum"/>
+             <xsl:if test="position() != last()">
+               <xsl:text>,</xsl:text>
+               <br/>
+             </xsl:if>
+            </xsl:for-each>
+          </xsl:if>
+        </td>
+    </xsl:for-each>
+    </tr>
+    </xsl:if>
+
     <!-- The fourth row for attribute storage type-->
     <tr>
       <td class="rowodd">Storage Type:</td>
@@ -5525,31 +5607,31 @@
   </xsl:template>
 
   <!-- eml-attribute-enumeratedDomain-2.0.0.xsl -->
-  <xsl:template name="nonNumericDomain">
-    <xsl:param name="nondomainfirstColStyle"/>
-    <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: nonNumericDomain</xsl:text></xsl:message></xsl:if>
-    <a href="#" class="non-numeric-toggle"><span class="fas fa-chevron-circle-down"></span>Allowed Values and Definitions</a>
-    <div class="collapse">
-      <table class="{$tabledefaultStyle}">
-          <xsl:choose>
-          <xsl:when test="references!=''">
-            <xsl:variable name="ref_id" select="references"/>
-            <xsl:variable name="references" select="$ids[@id=$ref_id]" />
-            <xsl:for-each select="$references">
-              <xsl:call-template name="nonNumericDomainCommon">
-              <xsl:with-param name="nondomainfirstColStyle" select="$nondomainfirstColStyle"/>
-              </xsl:call-template>
-            </xsl:for-each>
-          </xsl:when>
-          <xsl:otherwise>
+   <xsl:template name="nonNumericDomain">
+     <xsl:param name="nondomainfirstColStyle"/>
+     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: nonNumericDomain</xsl:text></xsl:message></xsl:if>
+      <strong id="toggleNonNumericDomain" class="toggleButton"><button>+/-</button>Allowed Values and Definitions</strong>
+      <div class="collapsible">
+     <table class="{$tabledefaultStyle}">
+        <xsl:choose>
+         <xsl:when test="references!=''">
+          <xsl:variable name="ref_id" select="references"/>
+          <xsl:variable name="references" select="$ids[@id=$ref_id]" />
+          <xsl:for-each select="$references">
             <xsl:call-template name="nonNumericDomainCommon">
-              <xsl:with-param name="nondomainfirstColStyle" select="$nondomainfirstColStyle"/>
+             <xsl:with-param name="nondomainfirstColStyle" select="$nondomainfirstColStyle"/>
             </xsl:call-template>
-          </xsl:otherwise>
-        </xsl:choose>
-      </table>
-    </div>
-</xsl:template>
+          </xsl:for-each>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:call-template name="nonNumericDomainCommon">
+             <xsl:with-param name="nondomainfirstColStyle" select="$nondomainfirstColStyle"/>
+           </xsl:call-template>
+        </xsl:otherwise>
+      </xsl:choose>
+    </table>
+      </div>
+  </xsl:template>
 
   <xsl:template name="nonNumericDomainCommon">
     <xsl:param name="nondomainfirstColStyle"/>
@@ -5645,7 +5727,10 @@
         <tr>
           <td class="{$nondomainfirstColStyle}">URL</td>
           <td class="{$secondColStyle}">
-            <a><xsl:attribute name="href"><xsl:value-of select="."/></xsl:attribute><xsl:value-of select="."/></a>
+            <a>
+              <xsl:attribute name="class">dataseteml</xsl:attribute>
+              <xsl:attribute name="href"><xsl:value-of select="."/></xsl:attribute><xsl:value-of select="."/>
+            </a>
           </td>
         </tr>
       </xsl:for-each>
@@ -5683,7 +5768,7 @@
       <tr>
         <td class="{$nondomainfirstColStyle}">Data link:</td>
         <td>
-          <table  class="table table-bordered {$tabledefaultStyle}">
+          <table  class="subGroup onehundred_percent {$tabledefaultStyle}">
           <!-- when you call the entityurl template, include a param to label the type of entity  -->
           <!-- also, need
           http://stackoverflow.com/questions/4449810/using-position-function-in-xslt
@@ -6107,6 +6192,7 @@
           <td class="{$firstColStyle}">Data:</td>
           <td class="{$secondColStyle}">
             <a>
+              <xsl:attribute name="class">dataseteml</xsl:attribute>
               <xsl:attribute name="href">/nis/dataviewer?packageid=<xsl:value-of select="$packageID" />&amp;entityid=<xsl:value-of select="$entity_identifier_encd" /></xsl:attribute>
               <xsl:attribute name="target">_blank</xsl:attribute>
               <xsl:value-of select="."/>
@@ -6119,6 +6205,7 @@
           <td class="{$firstColStyle}">Url:</td>
           <td class="{$secondColStyle}">
             <a>
+              <xsl:attribute name="class">dataseteml</xsl:attribute>
               <xsl:attribute name="href"><xsl:value-of select="$URL" /></xsl:attribute>
               <xsl:attribute name="target">_blank</xsl:attribute>
               <xsl:value-of select="."/>
@@ -6135,6 +6222,7 @@
             <xsl:attribute name="href">
               <xsl:text>http://maps.google.com/?q=</xsl:text><xsl:value-of select="$URL"/>
             </xsl:attribute>
+            <xsl:attribute name="class">dataseteml</xsl:attribute>
             CLICK HERE FOR MAP
           </xsl:element>
         </td>
@@ -7397,13 +7485,14 @@
   <xsl:template name="method">
     <xsl:param name="methodfirstColStyle"/>
     <xsl:param name="methodsubHeaderStyle"/>
+    <xsl:param name="subgroupBorder"/>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: method</xsl:text></xsl:message></xsl:if>
     <!-- <table class="{$tabledefaultStyle}">  use this class to unbox the table  -->
-    <table class="table table-bordered">
+    <table class="subGroup onehundred_percent" >
       <tr>
 	      <!-- changed table title. usually protocol refs, sometimes procedural steps -->
         <!-- Step by Step Procedures  -->
-        <th colspan="2">Protocols and/or Procedures</th>
+        <th colspan="2">Methods and protocols used in the collection of this data package</th>
       </tr>
       <xsl:for-each select="methodStep">
 		    <!-- methodStep (defined below) calls step (defined in protocol.xsl).  -->
@@ -7415,6 +7504,7 @@
 				    <xsl:call-template name="methodStep">
 				      <xsl:with-param name="methodfirstColStyle" select="$methodfirstColStyle"/>
 				      <xsl:with-param name="methodsubHeaderStyle" select="$methodsubHeaderStyle"/>
+				      <xsl:with-param name="subgroupBorder" select="$subgroupBorder"/>
 			      </xsl:call-template>
 			    </td>
 		    </tr>
@@ -7423,7 +7513,7 @@
       <xsl:if test="sampling">
 		    <xsl:for-each select="sampling">
 		      <!-- <table class="{$tabledefaultStyle}">  use this class to unbox the table  -->
-			    <table class="table table-bordered">
+		      <table class="subGroup onehundred_percent" >
             <tr>
 				      <th colspan="2">Sampling Area and Study Extent</th>
 				    </tr>
@@ -7466,10 +7556,12 @@
   <xsl:template name="methodStep">
     <xsl:param name="methodfirstColStyle"/>
     <xsl:param name="methodsubHeaderStyle"/>
+    <xsl:param name="subgroupBorder"/>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: methodStep</xsl:text></xsl:message></xsl:if>
     <xsl:call-template name="step">
       <xsl:with-param name="protocolfirstColStyle" select="$methodfirstColStyle"/>
       <xsl:with-param name="protocolsubHeaderStyle" select="$methodsubHeaderStyle"/>
+      <xsl:with-param name="subgroupBorder" select="$subgroupBorder"/>
     </xsl:call-template>
     <xsl:for-each select="dataSource">
       <tr>
@@ -8302,6 +8394,8 @@
     </tr>
   </xsl:template>
 
+<!-- might be a duplicate. that calls itself? -->
+<!--
   <xsl:template match="citation">
     <xsl:param name="physicalfirstColStyle"/>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: citation (match)</xsl:text></xsl:message></xsl:if>
@@ -8314,7 +8408,9 @@
         </xsl:call-template>
       </td>
     </tr>
-  </xsl:template>
+  </xsl:template-->
+
+
 
   <!-- binaryRasterFormat templates -->
   <xsl:template name="physicalbinaryRasterFormat">
@@ -8418,6 +8514,8 @@
   </xsl:template>
 
   <!-- eml-project-2.0.0.xsl -->
+
+
   <xsl:template name="project">
     <xsl:param name="projectfirstColStyle"/>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: project</xsl:text></xsl:message></xsl:if>
@@ -8460,6 +8558,11 @@
       <xsl:with-param name="projectfirstColStyle" select="$projectfirstColStyle"/>
     </xsl:call-template>
     <xsl:call-template name="projectdesigndescription">
+      <xsl:with-param name="projectfirstColStyle" select="$projectfirstColStyle"/>
+    </xsl:call-template>
+
+
+    <xsl:call-template name="projectaward">
       <xsl:with-param name="projectfirstColStyle" select="$projectfirstColStyle"/>
     </xsl:call-template>
     <xsl:call-template name="projectrelatedproject">
@@ -8636,6 +8739,9 @@
     </xsl:for-each>
   </xsl:template>
 
+
+
+
   <xsl:template name="projectrelatedproject">
     <xsl:param name="projectfirstColStyle"/>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: projectrelatedproject</xsl:text></xsl:message></xsl:if>
@@ -8651,6 +8757,101 @@
        </tr>
     </xsl:for-each>
   </xsl:template>
+
+
+  <!-- award info added for EML 2.2 -->
+
+  <xsl:template name="projectaward">
+    <xsl:param name="projectfirstColStyle"/>
+    <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: projectdesigndescription</xsl:text></xsl:message></xsl:if>
+    <xsl:for-each select="award">
+      <tr><td class="{$projectfirstColStyle}">
+        Additional Award Information:
+      </td>
+        <td>
+          <table>
+            <tr>
+              <td class="{$projectfirstColStyle}">Funder:</td>
+              <td class="{$secondColStyle}"><xsl:value-of select="funderName"/>
+              <xsl:if test="funderIdentifier">
+                <table>
+                    <xsl:for-each select="funderIdentifier">
+                      <tr>
+                        <td class="{$projectfirstColStyle}">Funder ID:</td>
+                        <!-- logic to create URL suports DOIs or RORs. others could be added, per discussion. -->
+                        <td class="{$secondColStyle}">
+                        <xsl:choose>
+                          <xsl:when test="contains(., 'https://doi.org')">
+                            <xsl:element name="a">
+                              <xsl:attribute name="class">dataseteml</xsl:attribute>
+                              <xsl:attribute name="href">
+                                <xsl:value-of select="."/>
+                              </xsl:attribute>
+                              <xsl:attribute name="target">
+                                <xsl:text>_blank</xsl:text>
+                              </xsl:attribute>
+                              <xsl:value-of select="."/>
+                            </xsl:element>
+                          </xsl:when>
+                          <xsl:when test="contains(., 'https://ror.org')">
+                            <xsl:element name="a">
+                              <xsl:attribute name="class">dataseteml</xsl:attribute>
+                              <xsl:attribute name="href">
+                                <xsl:value-of select="."/>
+                              </xsl:attribute>
+                              <xsl:attribute name="target">
+                                <xsl:text>_blank</xsl:text>
+                              </xsl:attribute>
+                              <xsl:value-of select="."/>
+                            </xsl:element>
+                          </xsl:when>
+                          <xsl:otherwise>
+                            <!-- any other type of ID -->
+                            <xsl:value-of select="."/>
+                          </xsl:otherwise>
+                        </xsl:choose>
+                        </td>
+                      </tr>
+                    </xsl:for-each>
+                </table>
+              </xsl:if>
+              </td>
+            </tr>
+            <xsl:if test="awardNumber">
+              <tr>
+                <td class="{$projectfirstColStyle}">Number:</td>
+                <td class="{$secondColStyle}"><xsl:value-of select="awardNumber"/></td>
+              </tr>
+            </xsl:if>
+            <tr>
+              <td class="{$projectfirstColStyle}">Title:</td>
+              <td class="{$secondColStyle}"><xsl:value-of select="title"/></td>
+            </tr>
+            <xsl:if test="awardUrl">
+              <tr>
+                <td class="{$projectfirstColStyle}">URL:</td>
+                <td class="{$secondColStyle}">
+                  <xsl:element name="a">
+                    <xsl:attribute name="class">dataseteml</xsl:attribute>
+                    <xsl:attribute name="href">
+                      <xsl:value-of select="awardUrl"/>
+                    </xsl:attribute>
+                    <xsl:attribute name="target">
+                      <xsl:text>_blank</xsl:text>
+                    </xsl:attribute>
+                    <xsl:value-of select="awardUrl"/>
+                  </xsl:element>
+                </td>
+              </tr>
+            </xsl:if>
+          </table>
+        </td>
+      </tr>
+
+    </xsl:for-each>
+  </xsl:template>
+
+
 
   <!-- eml-protocol-2.0.0.xsl -->
   <!--
@@ -8699,6 +8900,7 @@
       <xsl:call-template name="step">
         <xsl:with-param name="protocolfirstColStyle" select="$protocolfirstColStyle"/>
         <xsl:with-param name="protocolsubHeaderStyle" select="$protocolsubHeaderStyle"/>
+        <xsl:with-param name="subgroupBorder" select="$subgroupBorder"/>
       </xsl:call-template>
     </xsl:for-each>
     <xsl:call-template name="protocolAccess">
@@ -8742,33 +8944,25 @@
   <!-- 'step' refers to ProcedureStepType, i.e., methodStep (w/o optional dataSource)
 	     (called from method.xsl, and here, from nested subStep)
 	     mob added the table element to box each step -->
+
+
+
   <xsl:template name="step">
     <xsl:param name="protocolfirstColStyle"/>
     <xsl:param name="protocolsubHeaderStyle"/>
+    <xsl:param name="subgroupBorder"/>
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: step</xsl:text></xsl:message></xsl:if>
-    <table class="{$tabledefaultStyle}">
+    <table class="{$tabledefaultStyle} {$subgroupBorder}">
       <xsl:for-each select="description">
-        <xsl:variable name="title" select="../dataSource/title"/>
         <tr>
           <td class="{$protocolfirstColStyle}">Description:</td>
-          <td>
-          <xsl:if test="($title) and normalize-space($title) != ''">
-            <h4>Provenance Metadata - The following data source was used in the creation of this product:</h4>
-          </xsl:if>
-          <xsl:variable name="url" select="../dataSource/distribution/online/url"/>
-          <xsl:choose>
-            <xsl:when test="(./para/literalLayout[1] = $prov-stmt) or (./para[1] = $prov-stmt)">
-               <p class="eml"><xsl:value-of select="../dataSource/title"/> (<a href="./metadataviewer?url={$url}" target="_blank">Click here to view metadata</a>)</p>
-            </xsl:when>
-            <xsl:when test="($url) and normalize-space($url) != ''">
-               <p class="eml"><xsl:value-of select="../dataSource/title"/> (<a href="{$url}" target="_blank">Click here to view data source</a>)</p>
-            </xsl:when>
-            <xsl:otherwise>
-              <xsl:call-template name="text">
-                <xsl:with-param name="textfirstColStyle" select="$protocolfirstColStyle"/>
-              </xsl:call-template>
-            </xsl:otherwise>
-          </xsl:choose>
+          <td class="{$secondColStyle}">
+            <!--
+            <xsl:value-of select="."/> -->
+            <xsl:call-template name="steptext">
+              <xsl:with-param name="textfirstColStyle" select="$firstColStyle"/>
+              <xsl:with-param name="textsecondColStyle" select="$secondColStyle"/>
+            </xsl:call-template>
           </td>
         </tr>
       </xsl:for-each>
@@ -8787,13 +8981,13 @@
         <tr>
           <td class="{$protocolfirstColStyle}">Protocol:</td>
           <td class="{$secondColStyle}">
-					<!-- mob nested this table in col2, instead of new row. -->
-	          <xsl:call-template name="protocol">
+            <!-- mob nested this table in col2, instead of new row. -->
+            <xsl:call-template name="protocol">
               <xsl:with-param name="protocolfirstColStyle" select="$protocolfirstColStyle"/>
               <xsl:with-param name="protocolsubHeaderStyle" select="$protocolsubHeaderStyle"/>
             </xsl:call-template>
           </td>
-	      </tr>
+        </tr>
       </xsl:for-each>
       <xsl:for-each select="instrumentation">
         <tr>
@@ -8813,18 +9007,92 @@
       </xsl:for-each>
       <xsl:for-each select="subStep">
         <tr>
-          <td class="{$protocolfirstColStyle}">Substep<xsl:text> </xsl:text><xsl:value-of select="position()"/></td>
-          <td class="{$secondColStyle}">&#160;</td>
-					<td>  <!-- correct? was outside of table -->
-            <xsl:call-template name="step">
-						  <xsl:with-param name="protocolfirstColStyle" select="$protocolfirstColStyle"/>
-						  <xsl:with-param name="protocolsubHeaderStyle" select="$protocolsubHeaderStyle"/>
-						</xsl:call-template>
-					</td>
-		    </tr>
+          <td><xsl:text> </xsl:text></td>
+          <td><table>
+            <tr>
+              <td class="{$protocolfirstColStyle}">Substep<xsl:text> </xsl:text><xsl:value-of select="position()"/></td>
+              <td class="{$secondColStyle}">&#160;</td>
+              <td>  <!-- correct? was outside of table -->
+                <xsl:call-template name="step">
+                  <xsl:with-param name="protocolfirstColStyle" select="$protocolfirstColStyle"/>
+                  <xsl:with-param name="protocolsubHeaderStyle" select="$protocolsubHeaderStyle"/>
+                </xsl:call-template>
+              </td>
+            </tr>
+          </table>
+          </td>
+        </tr>
       </xsl:for-each>
-		</table>
+      <xsl:for-each select="dataSource">
+        <tr>
+          <td class="{$protocolfirstColStyle}">Data Source</td>
+        <td colspan="2">
+          <xsl:call-template name="datasource">
+            <xsl:with-param name="datasourcefirstColStyle" select="$protocolfirstColStyle"/>
+            <xsl:with-param name="datasourcesubHeaderStyle" select="$protocolsubHeaderStyle"/>
+          </xsl:call-template>
+        </td>
+        </tr>
+      </xsl:for-each>
+    </table>
   </xsl:template>
+
+
+
+  <xsl:template name="steptext">
+    <xsl:param name="textfirstColStyle" />
+    <xsl:param name="textsecondColStyle" />
+    <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: steptext</xsl:text></xsl:message></xsl:if>
+    <xsl:if test="(section and normalize-space(section[1]) != '') or (para and normalize-space(para[1]) != '') or (. != '')">
+      <!-- was <xsl:apply-templates mode="text"> (mgb 7Jun2011) use mode="lowlevel" to make abstract use p for para -->
+      <div>
+        <xsl:apply-templates mode="text">
+          <xsl:with-param name="textfirstColStyle" select="$textfirstColStyle"/>
+          <xsl:with-param name="textsecondColStyle" select="$textsecondColStyle" />
+        </xsl:apply-templates>
+      </div>
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="datasource">
+    <xsl:param name="datasourcefirstColStyle"/>
+    <xsl:param name="datasourcesubHeaderStyle"/>
+    <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: datasource</xsl:text></xsl:message></xsl:if>
+    <xsl:variable name="url" select="distribution/online/url"/>
+    <!-- look at the URL to determine if it points to a homie -->
+    <xsl:variable name="datasource-url">
+      <xsl:choose>
+        <xsl:when test='matches($url, $pasta-id-string)'>
+          <!-- URL is a pasta ID. construct a URL to the landing page -->
+          <xsl:text>./metadataviewer?url=</xsl:text><xsl:value-of select="normalize-space($url)"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <!-- an external URL, pass it straight through -->
+          <xsl:value-of select="normalize-space($url)"/>
+        </xsl:otherwise>
+    </xsl:choose>
+    </xsl:variable>
+
+    <table class="{$tabledefaultStyle}">
+      <tr>
+        <td  class="datasourcefirstColStyle">
+          <xsl:element name="a">
+            <xsl:attribute name="target">_blank</xsl:attribute>
+            <xsl:attribute name="class">dataseteml</xsl:attribute>
+            <xsl:attribute name="href">
+              <xsl:value-of select="$datasource-url"/>
+            </xsl:attribute>
+          <xsl:value-of select="title"/>
+          </xsl:element>
+        </td>
+
+      </tr>
+    </table>
+
+
+  </xsl:template>
+
+
 
 	<!-- ? needed? no access elements here. -->
   <xsl:template name="protocolAccess">
@@ -10925,6 +11193,7 @@
   <xsl:template match="ulink">
     <xsl:if test="boolean(number($debugmessages))"><xsl:message><xsl:text>TEMPLATE: ulink</xsl:text></xsl:message></xsl:if>
     <xsl:element name="a">
+      <xsl:attribute name="class">dataseteml</xsl:attribute>
       <xsl:attribute name="href">
         <xsl:value-of select="@url"/>
       </xsl:attribute>
@@ -11138,5 +11407,39 @@
       </td>
     </tr>
   </xsl:template>
+
+
+  <!-- templates added for EML 2.2. mob 2019-october -->
+
+    <!-- minimal template for an annotation.
+      other content from calling template. concept is linked out
+      if URI contains a purl, property is not (usually a default) -->
+    <xsl:template name="annotationMinimum">
+      <xsl:text> </xsl:text>
+      <xsl:value-of select="propertyURI/@label"/>
+      <xsl:text> </xsl:text>
+      <xsl:choose>
+        <xsl:when test="contains(valueURI, 'purl')">
+          <xsl:element name="a">
+            <xsl:attribute name="class">dataseteml</xsl:attribute>
+            <xsl:attribute name="href">
+              <xsl:value-of select="valueURI"/>
+            </xsl:attribute>
+            <xsl:attribute name="target">
+              <xsl:text>_blank</xsl:text>
+            </xsl:attribute>
+            <xsl:value-of select="valueURI/@label"/>
+          </xsl:element>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select="valueURI/@label"/>
+        </xsl:otherwise>
+      </xsl:choose>
+
+
+
+
+  </xsl:template>
+
 
 </xsl:stylesheet>
