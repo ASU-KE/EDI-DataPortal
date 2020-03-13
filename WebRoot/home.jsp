@@ -75,27 +75,11 @@
     <jsp:param name="homePageUrl" value="<%= homePageUrl %>" />
 </jsp:include>
 
-<div id="main-wrapper">
-	<div class="container main-content" style="margin-top: -3rem!important;">
-		<div class="row pt-5">
-			<div class="hero-text col-sm-12 col-md-8 col-lg-6">
-				<h1><%= siteName %> Data Portal</h1>
-                <p>Search for datasets from research conducted across the globe by <%= siteName %> scientists and scholars.</p>
-				<form class="form-inline my-2 my-lg-0 d-inline" action="./simpleSearch" method="post" _lpchecked="1">
-					<input class="form-control mr-sm-2" type="search" name="terms" id="navBarTerms" placeholder="Search The Portal" aria-label="Search">
-					<button class="btn btn-primary my-2 my-sm-0" type="submit">Search</button>
-					<span class="navbar-text pl-3"><a href="advancedSearch.jsp">Advanced Search</a></span>
-				</form>
-			</div>
-		</div>
-	</div>
-</div>
 
-<div class="container main-content" style="min-height: 700px;">
-    <jsp:include page="<%= contentInclude %>" flush="true">
-        <jsp:param name="siteName" value="<%= siteName %>" />
-    </jsp:include>
-</div>
+<jsp:include page="<%= contentInclude %>" flush="true">
+    <jsp:param name="siteName" value="<%= siteName %>" />
+</jsp:include>
+
 
 <div class="footer">
 	<jsp:include page="<%= bigFooterInclude %>" />
