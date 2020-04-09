@@ -162,13 +162,6 @@ Buttons
     color: #000 !important;
 }
 
-#main-wrapper {
-    background-image: url('../images/lab-bg.jpg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    height: 487px;
-}
-
 /*******************
 Links
 *******************/

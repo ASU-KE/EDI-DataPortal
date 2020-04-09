@@ -1,3 +1,11 @@
+<style>
+    #main-wrapper {
+        background-image: url('images/gios-bg.jpg');
+        background-repeat: no-repeat;
+        background-size: cover;
+        height: 487px;
+    }
+</style>
 <div id="main-wrapper">
 	<div class="container main-content" style="margin-top: -3rem!important;">
 		<div class="row pt-5">
