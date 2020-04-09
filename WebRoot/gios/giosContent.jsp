@@ -30,7 +30,7 @@
             <p>The ${param.siteName} Data Portal is a modified version of <a href="https://portal.edirepository.org/nis/home.jsp" target="_blank">the Environmental Data Initiative (EDI) Data Portal</a> - it is powered by the same technology, and searches the same EDI database, but is filtered to only include datasets published by ${param.siteName} scientists and scholars.
         </div>
         <div class="d-none d-sm-block col-sm-12 col-md-5">
-            <img class="img-100" src="images/portal-graphic-01.svg" alt="placeholder">
+            <img src="images/portal-graphic-01.png" alt="placeholder">
         </div>
     </div>
 </div>
